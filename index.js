@@ -60,36 +60,45 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
   let user = await User.findById(userId);
 
   let dateStr = new Date(req.body.date);
+
   if (req.body.date == '') {
     dateStr = new Date();
   }
-
-  const newExercise = new Exercise({
-    userid: user._id,
-    description: req.body.description,
-    duration: req.body.duration,
-    date: dateStr,
-  });
-
-  try {
-    const savedData = await newExercise.save();
+  if (dateStr == 'Invalid Date') {
     res.json({
-      username: user.username,
-      description: savedData.description,
-      duration: savedData.duration,
-      date: new Date(savedData.date).toDateString(),
-      _id: savedData.userid,
+      error: 'Invalid Date. Please enter valid date in yyyy-mm-dd format.',
     });
-  } catch (error) {
-    res.json({ error: 'Error in updating data in database' });
-    console.log('Error:', error);
+  } else {
+    const newExercise = new Exercise({
+      userid: user._id,
+      description: req.body.description,
+      duration: req.body.duration,
+      date: dateStr,
+    });
+
+    try {
+      const savedData = await newExercise.save();
+      res.json({
+        username: user.username,
+        description: savedData.description,
+        duration: savedData.duration,
+        date: new Date(savedData.date).toDateString(),
+        _id: savedData.userid,
+      });
+    } catch (error) {
+      res.json({ error: 'Error in updating data in database' });
+      console.log('Error:', error);
+    }
   }
 });
 
 // Endpoint - /api/users/:_id/logs
 app.get('/api/users/:_id/logs', async (req, res) => {
   const userId = req.params._id;
+
   const { from, to, limit } = req.query;
+  console.log('from:', from);
+  console.log('to:', to);
   const user = await User.findById(userId);
 
   if (user) {
