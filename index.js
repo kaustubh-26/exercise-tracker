@@ -61,34 +61,33 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
 
   let dateStr = new Date(req.body.date);
 
-  if (req.body.date == '') {
+  if (req.body.date == '' || dateStr == 'Invalid Date') {
     dateStr = new Date();
   }
-  if (dateStr == 'Invalid Date') {
-    res.json({
-      error: 'Invalid Date. Please enter valid date in yyyy-mm-dd format.',
-    });
-  } else {
-    const newExercise = new Exercise({
-      userid: user._id,
-      description: req.body.description,
-      duration: req.body.duration,
-      date: dateStr,
-    });
+  // if (dateStr == 'Invalid Date') {
+  //   res.json({
+  //     error: 'Invalid Date. Please enter valid date in yyyy-mm-dd format.',
+  //   });
+  // } else {
+  const newExercise = new Exercise({
+    userid: user._id,
+    description: req.body.description,
+    duration: req.body.duration,
+    date: dateStr.toISOString(),
+  });
 
-    try {
-      const savedData = await newExercise.save();
-      res.json({
-        username: user.username,
-        description: savedData.description,
-        duration: savedData.duration,
-        date: new Date(savedData.date).toDateString(),
-        _id: savedData.userid,
-      });
-    } catch (error) {
-      res.json({ error: 'Error in updating data in database' });
-      console.log('Error:', error);
-    }
+  try {
+    const savedData = await newExercise.save();
+    res.json({
+      username: user.username,
+      description: savedData.description,
+      duration: savedData.duration,
+      date: new Date(savedData.date).toDateString(),
+      _id: savedData.userid,
+    });
+  } catch (error) {
+    res.json({ error: 'Error in updating data in database' });
+    console.log('Error:', error);
   }
 });
 
@@ -125,29 +124,30 @@ app.get('/api/users/:_id/logs', async (req, res) => {
         String(new Date(to).getDate()).padStart(2, '0') +
         'T23:59:59.999Z';
     }
-    if (from || to) {
+    if (from && to) {
       filter.date = queryDate;
     }
 
-    const records = await Exercise.find(filter)
-      .limit(+limit ?? 10)
-      .select({
-        __v: 0,
-        _id: 0,
-        userid: 0,
-      })
-      .then((records) => {
-        records = records.map((record) => {
-          const formattedDate = new Date(record.date).toDateString();
-          return { ...record.toObject(), date: formattedDate };
-        });
-        return records;
-      });
+    let records = await Exercise.find(filter).select({
+      __v: 0,
+      _id: 0,
+      userid: 0,
+    });
+
+    if (limit) {
+      records = records.slice(0, limit);
+    }
+
+    records = records.map((record) => {
+      const formattedDate = new Date(record.date).toDateString();
+      return { ...record.toObject(), date: formattedDate };
+    });
+
     console.log('user::', records);
     res.json({
+      _id: user._id,
       username: user.username,
       count: records.length,
-      _id: user._id,
       log: records,
     });
   } else {
